@@ -14,8 +14,9 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { router, useRouter } from "expo-router";
 
 export default function ChildHomeWork() {
-  const { data, loading, error } = useQuery(GET_STUDENT_DETAILS_BY_PARENT);
-
+  const { data, loading, error } = useQuery(GET_STUDENT_DETAILS_BY_PARENT, {
+    fetchPolicy: "network-only",
+  });
   const router = useRouter();
 
   if (loading) {

@@ -174,20 +174,20 @@ const useStudentsData = (
         group: filter.group || undefined,
       },
     },
-    notifyOnNetworkStatusChange: true,
     fetchPolicy: "network-only",
   });
 
+  // Set students data to state
   useEffect(() => {
-    if (students?.GetStudents?.students) {
+    if (students?.GetStudents) {
       setStudentsData(students.GetStudents.students || []);
       setTotalCount(students.GetStudents.total || 0);
     }
-  }, [students?.GetStudents?.students, filter.class]);
+  }, [students]);
 
+  // Handle filter and search changes
   useEffect(() => {
     setCurrentPage(1);
-    setStudentsData([]);
     refetchStudents({
       page: 1,
       limit: itemsPerPage,
@@ -204,6 +204,7 @@ const useStudentsData = (
     filter.group,
     debouncedSearchQuery,
     refetchStudents,
+    itemsPerPage,
   ]);
 
   const handleLoadMore = async () => {
@@ -237,13 +238,7 @@ const useStudentsData = (
               ...fetchMoreResult.GetStudents,
               students: [
                 ...prev.GetStudents.students,
-                ...fetchMoreResult.GetStudents.students.filter(
-                  (newStudent: Student) =>
-                    !prev.GetStudents.students.some(
-                      (existing: Student) =>
-                        existing.studentId === newStudent.studentId
-                    )
-                ),
+                ...fetchMoreResult.GetStudents.students,
               ],
             },
           };
@@ -251,15 +246,7 @@ const useStudentsData = (
       });
 
       if (newData?.GetStudents?.students) {
-        setStudentsData((prev) => [
-          ...prev,
-          ...newData.GetStudents.students.filter(
-            (newStudent: Student) =>
-              !prev.some(
-                (existing) => existing.studentId === newStudent.studentId
-              )
-          ),
-        ]);
+        setStudentsData((prev) => [...prev, ...newData.GetStudents.students]);
         setCurrentPage(nextPage);
       }
     } catch (error) {
@@ -405,12 +392,14 @@ const StudentView: React.FC<{
   searchQuery: string;
   isFetchingMore: boolean;
   studentsLoading: boolean;
+  totalCount: number;
   onLoadMore: () => void;
 }> = ({
   studentsData,
   searchQuery,
   isFetchingMore,
   studentsLoading,
+  totalCount,
   onLoadMore,
 }) => {
   const router = useRouter();
@@ -462,12 +451,25 @@ const StudentView: React.FC<{
           estimatedItemSize={120}
           showsVerticalScrollIndicator={false}
           onEndReached={onLoadMore}
-          onEndReachedThreshold={0.5}
+          onEndReachedThreshold={0.2}
+          removeClippedSubviews={true}
           ListFooterComponent={
             isFetchingMore ? (
               <View style={styles.loadingMoreContainer}>
                 <ActivityIndicator size="small" color="#6366F1" />
                 <Text style={styles.loadingMoreText}>Loading more...</Text>
+              </View>
+            ) : studentsData.length > 0 && studentsData.length < totalCount ? (
+              <View style={styles.loadingMoreContainer}>
+                <Text style={styles.loadingMoreText}>
+                  Scroll to load more students
+                </Text>
+              </View>
+            ) : studentsData.length > 0 && studentsData.length >= totalCount ? (
+              <View style={styles.loadingMoreContainer}>
+                <Text style={styles.loadingMoreText}>
+                  All students loaded ({studentsData.length} of {totalCount})
+                </Text>
               </View>
             ) : null
           }
@@ -611,84 +613,89 @@ const StudentList: React.FC = () => {
           </View>
 
           {/* Filter Pills Container */}
-          <View style={styles.filtersGrid}>
-            {/* Class Filter */}
-            <View style={styles.filterPill}>
-              <Text style={styles.filterLabel}>Class</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={filter.class}
-                  onValueChange={(value) =>
-                    setFilter({
-                      ...filter,
-                      class: value,
-                      section: "",
-                      group: "",
-                    })
-                  }
-                  style={styles.picker}
-                  dropdownIconColor="#6366F1"
-                  enabled={!classLoading}
-                >
-                  <Picker.Item label="All" value="" />
-                  {classListData.map((cls) => (
-                    <Picker.Item
-                      key={cls.classId}
-                      label={cls.className}
-                      value={cls.classId}
-                    />
-                  ))}
-                </Picker>
+          <View style={styles.filtersLayout}>
+            {/* Class and Section Row */}
+            <View style={styles.filtersRow}>
+              {/* Class Filter */}
+              <View style={styles.filterPill}>
+                <Text style={styles.filterLabel}>Class</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={filter.class}
+                    onValueChange={(value) =>
+                      setFilter({
+                        ...filter,
+                        class: value,
+                        section: "",
+                        group: "",
+                      })
+                    }
+                    style={styles.picker}
+                    dropdownIconColor="#6366F1"
+                    enabled={!classLoading}
+                  >
+                    <Picker.Item label="All" value="" />
+                    {classListData.map((cls) => (
+                      <Picker.Item
+                        key={cls.classId}
+                        label={cls.className}
+                        value={cls.classId}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              {/* Section Filter */}
+              <View style={styles.filterPill}>
+                <Text style={styles.filterLabel}>Section</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={filter.section}
+                    onValueChange={(value) =>
+                      setFilter({ ...filter, section: value })
+                    }
+                    style={styles.picker}
+                    dropdownIconColor="#6366F1"
+                    enabled={!sectionLoading && sectionListData.length > 0}
+                  >
+                    <Picker.Item label="All" value="" />
+                    {sectionListData.map((section) => (
+                      <Picker.Item
+                        key={section.sectionId}
+                        label={section.sectionName}
+                        value={section.sectionId}
+                      />
+                    ))}
+                  </Picker>
+                </View>
               </View>
             </View>
 
-            {/* Section Filter */}
-            <View style={styles.filterPill}>
-              <Text style={styles.filterLabel}>Section</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={filter.section}
-                  onValueChange={(value) =>
-                    setFilter({ ...filter, section: value })
-                  }
-                  style={styles.picker}
-                  dropdownIconColor="#6366F1"
-                  enabled={!sectionLoading && sectionListData.length > 0}
-                >
-                  <Picker.Item label="All" value="" />
-                  {sectionListData.map((section) => (
-                    <Picker.Item
-                      key={section.sectionId}
-                      label={section.sectionName}
-                      value={section.sectionId}
-                    />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-
-            {/* Group Filter */}
-            <View style={styles.filterPill}>
-              <Text style={styles.filterLabel}>Group</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={filter.group}
-                  onValueChange={(value) =>
-                    setFilter({ ...filter, group: value })
-                  }
-                  style={styles.picker}
-                  dropdownIconColor="#6366F1"
-                  enabled={!groupLoading && groupListData.length > 0}
-                >
-                  <Picker.Item label="All" value="" />
-                  {groupListData.map((group) => (
-                    <Picker.Item
-                      key={group.groupId}
-                      label={group.groupName}
-                      value={group.groupId}
-                    />
-                  ))}
-                </Picker>
+            {/* Group Filter Row */}
+            <View style={styles.groupFilterRow}>
+              <View style={styles.filterPill}>
+                <Text style={styles.filterLabel}>Group</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={filter.group}
+                    onValueChange={(value) =>
+                      setFilter({ ...filter, group: value })
+                    }
+                    style={styles.picker}
+                    dropdownIconColor="#6366F1"
+                    enabled={!groupLoading && groupListData.length > 0}
+                  >
+                    <Picker.Item label="All" value="" />
+                    {groupListData.map((group) => (
+                      <Picker.Item
+                        key={group.groupId}
+                        label={group.groupName}
+                        value={group.groupId}
+                      />
+                    ))}
+                  </Picker>
+                </View>
               </View>
             </View>
           </View>
@@ -699,6 +706,7 @@ const StudentList: React.FC = () => {
           searchQuery={searchQuery}
           isFetchingMore={isFetchingMore}
           studentsLoading={studentsLoading}
+          totalCount={totalCount}
           onLoadMore={handleLoadMore}
         />
       </View>
@@ -771,9 +779,17 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  filtersGrid: {
+  filtersLayout: {
+    gap: 12,
+  },
+
+  filtersRow: {
     flexDirection: "row",
     gap: 12,
+  },
+
+  groupFilterRow: {
+    flexDirection: "row",
   },
 
   filterPill: {

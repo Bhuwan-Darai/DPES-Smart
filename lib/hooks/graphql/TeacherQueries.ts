@@ -121,7 +121,6 @@ export const DELETE_HOMEWORK_MUTATION = gql`
     removeHomework(id: $id) {
       success
       message
-      error
     }
   }
 `;

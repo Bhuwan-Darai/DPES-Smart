@@ -69,6 +69,12 @@ const TakeTeacherAttendance = () => {
     fetchPolicy: "network-only",
   });
 
+  console.log(JSON.stringify(data, null, 2), "schoolLocation");
+  console.log(
+    JSON.stringify(schoolLocationError, null, 2),
+    "schoolLocationError"
+  );
+
   const { data: teacherScheduleData, loading: teacherScheduleLoading } =
     useQuery(GET_TEACHER_SCHEDULE_QUERY, {
       fetchPolicy: "network-only",
@@ -387,6 +393,14 @@ const TakeTeacherAttendance = () => {
 
       <View style={styles.locationSection}>
         <Text style={styles.sectionTitle}>Location Verification</Text>
+        <Text style={styles.sectionTitle}>
+          My location: {userLocation?.latitude}, {userLocation?.longitude}
+        </Text>
+
+        <Text style={styles.sectionTitle}>
+          Institution location: {institutionCoordinates?.latitude},{" "}
+          {institutionCoordinates?.longitude}
+        </Text>
 
         {loading ? (
           <View style={styles.loadingContainer}>

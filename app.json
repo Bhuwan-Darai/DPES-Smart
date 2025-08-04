@@ -84,7 +84,7 @@
       },
       "apiUrl": "https://server567.pampaseducation.com.np/graphql",
       "restApiUrl": "https://server567.pampaseducation.com.np",
-      "env": "development"
+      "env": "production"
     },
     "owner": "inpro"
   }
